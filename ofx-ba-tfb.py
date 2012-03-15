@@ -88,7 +88,7 @@ class OFXClient:
         return self._message("SIGNUP","ACCTINFO",req)
 
 # this is from _ccreq below and reading page 176 of the latest OFX doc.
-    def _bareq(self, acctid, dtstart, accttype):
+    def _bareq(self, acctid, dtstart, dtend, accttype):
         config=self.config
         req = _tag("STMTRQ",
                     _tag("BANKACCTFROM",
@@ -97,6 +97,7 @@ class OFXClient:
                         _field("ACCTTYPE",accttype)),
                     _tag("INCTRAN",
                         _field("DTSTART",dtstart),
+                        _field("DTEND",dtend),
                         _field("INCLUDE","Y")))
         return self._message("BANK","STMT",req)
 
@@ -110,8 +111,7 @@ class OFXClient:
                         _field("INCLUDE","Y")))
         return self._message("CREDITCARD","CCSTMT",req)
 
-    def _invstreq(self, brokerid, acctid, dtstart):
-        dtnow = time.strftime("%Y%m%d%H%M%S",time.localtime())
+    def _invstreq(self, brokerid, acctid, dtstart, dtend):
         req = _tag("INVSTMTRQ",
                     _tag("INVACCTFROM",
                         _field("BROKERID", brokerid),
@@ -121,7 +121,7 @@ class OFXClient:
                         _field("INCLUDE","Y")),
                     _field("INCOO","Y"),
                     _tag("INCPOS",
-                        _field("DTASOF", dtnow),
+                        _field("DTASOF", dtend),
                         _field("INCLUDE","Y")),
                     _field("INCBAL","Y"))
         return self._message("INVSTMT","INVSTMT",req)
@@ -146,12 +146,12 @@ class OFXClient:
                            "NEWFILEUID:"+_genuuid(),
                            ""])
 
-    def baQuery(self, acctid, dtstart, accttype):
+    def baQuery(self, acctid, dtstart, dtend, accttype):
         """Bank account statement request"""
         return join("\r\n",[self._header(),
                        _tag("OFX",
                                 self._signOn(),
-                                self._bareq(acctid, dtstart, accttype))])
+                                self._bareq(acctid, dtstart, dtend, accttype))])
 
     def ccQuery(self, acctid, dtstart):
         """CC Statement request"""
@@ -166,11 +166,11 @@ class OFXClient:
                                self._signOn(),
                                self._acctreq(dtstart))])
 
-    def invstQuery(self, brokerid, acctid, dtstart):
+    def invstQuery(self, brokerid, acctid, dtstart, dtend):
         return join("\r\n",[self._header(),
                           _tag("OFX",
                                self._signOn(),
-                               self._invstreq(brokerid, acctid,dtstart))])
+                               self._invstreq(brokerid, acctid, dtstart, dtend))])
 
     def doQuery(self,query,name):
         # N.B. urllib doesn't honor user Content-type, use urllib2
@@ -186,9 +186,8 @@ class OFXClient:
             response = res.read()
             res.close()
 
-            f = file(name,"w")
-            f.write(response)
-            f.close()
+            with open(name,"w") as f:
+                f.write(response)
         else:
             print h
             print self.config["url"], query
@@ -213,8 +212,8 @@ if __name__=="__main__":
        if "CCSTMT" in sites[argv[1]]["caps"]:
           query = client.ccQuery(sys.argv[3], dtstart)
        elif "INVSTMT" in sites[argv[1]]["caps"]:
-          query = client.invstQuery(sites[argv[1]]["fiorg"], sys.argv[3], dtstart)
+          query = client.invstQuery(sites[argv[1]]["fiorg"], sys.argv[3], dtstart, dtnow)
        elif "BASTMT" in sites[argv[1]]["caps"]:
-          query = client.baQuery(sys.argv[3], dtstart, sys.argv[4])
+          query = client.baQuery(sys.argv[3], dtstart, dtnow, sys.argv[4])
        client.doQuery(query, argv[1]+dtnow+".ofx")
 
