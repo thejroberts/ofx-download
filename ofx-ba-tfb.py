@@ -1,41 +1,8 @@
 #!/usr/bin/python
-import time, os, httplib, urllib2, uuid
+import time, os, httplib, urllib2, uuid, json
 import sys
 
 join = str.join
-
-sites = {
-       "amex": {
-                 "caps": [ "SIGNON", "CCSTMT" ],
-                  "fid": "3101",
-                "fiorg": "AMEX",
-                  "url": "https://www99.americanexpress.com/myca/ofxdl/us/download?request_type=nl_desktopdownload",
-               },
-      "chase": {
-                 "caps": [ "SIGNON", "CCSTMT" ],
-                "fiorg": "B1",
-                  "fid": "10898",
-                  "url": "https://ofx.chase.com",
-               },
-   "fidelity": {
-                 "caps": [ "SIGNON", "INVSTMT" ],
-                "fiorg": "fidelity.com",
-                  "fid": "7776",
-                  "url": "https://ofx.fidelity.com/ftgw/OFX/clients/download",
-               },
-   "vanguard": {
-                 "caps": [ "SIGNON", "INVSTMT" ],
-                "fiorg": "vanguard.com",
-                  "url": "https://vesnc.vanguard.com/us/OfxDirectConnectServlet",
-               },
-       "usaa": {
-                 "caps": [ "SIGNON", "BASTMT" ],
-                  "fid": "24591",     # ^- this is what i added, for checking/savings/debit accounts- think "bank statement"
-                "fiorg": "USAA",
-                  "url": "https://service2.usaa.com/ofx/OFXServlet",
-               "bankid": "314074269", # bank routing #
-               }
-   }
 
 def _field(tag,value):
     return "<"+tag+">"+value
@@ -197,6 +164,12 @@ class OFXClient:
 import getpass
 argv = sys.argv
 if __name__=="__main__":
+    try:
+        with open("sites.json", "r") as f:
+            sites = json.load(f)
+    except IOError as e:
+        print 'no "sites.json" file detected'
+
     dtstart = time.strftime("%Y%m%d",time.localtime(time.time()-31*86400))
     dtnow = time.strftime("%Y%m%d%H%M%S",time.localtime())
     if len(argv) < 3:
