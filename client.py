@@ -23,7 +23,7 @@ class OFXClient:
         self.cookie = 3
         config["user"] = user
         config["password"] = password
-        if not config.has_key("appid"):
+        if "appid" not in config:
             config["appid"] = "QWIN"
             config["appver"] = "1800"
 
@@ -35,7 +35,7 @@ class OFXClient:
     def _signOn(self):
         config = self.config
         fidata = [ _field("ORG",config["fiorg"]) ]
-        if config.has_key("fid"):
+        if "fid" in config:
             fidata += [ _field("FID",config["fid"]) ]
         return _tag("SIGNONMSGSRQV1",
                     _tag("SONRQ",
@@ -154,5 +154,5 @@ class OFXClient:
             with open(name,"w") as f:
                 f.write(response)
         else:
-            print h
-            print self.config["url"], query
+            print self.config["url"]
+            print query

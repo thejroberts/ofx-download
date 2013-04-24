@@ -20,11 +20,10 @@ if __name__=="__main__":
         sys.exit()
     passwd = argv[3]
     client = OFXClient(sites[argv[1]], argv[2], passwd)
-    outfile = argv[1]+dtnow+".ofx"
 
     if len(argv) < 5:
         query = client.acctQuery("19700101000000")
-        client.doQuery(query, outfile) 
+        client.doQuery(query, argv[1]+"_acct.ofx")
     else:
         if "CCSTMT" in sites[argv[1]]["caps"]:
             query = client.ccQuery(argv[4], dtstart)
@@ -32,6 +31,6 @@ if __name__=="__main__":
             query = client.invstQuery(sites[argv[1]]["fiorg"], argv[4], dtstart, dtnow)
         elif "BASTMT" in sites[argv[1]]["caps"]:
             query = client.baQuery(sites[argv[1]]["bankid"], argv[4], dtstart, dtnow, argv[5])
-        client.doQuery(query, outfile)
+        client.doQuery(query, argv[1]+dtnow+".ofx")
 
     os.startfile("\"" + os.getcwd() + "\\" + outfile + "\"")

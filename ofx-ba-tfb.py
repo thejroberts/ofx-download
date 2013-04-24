@@ -20,9 +20,10 @@ if __name__=="__main__":
         sys.exit()
     passwd = getpass.getpass()
     client = OFXClient(sites[argv[1]], argv[2], passwd)
+
     if len(argv) < 4:
-       query = client.acctQuery("19700101000000")
-       client.doQuery(query, argv[1]+"_acct.ofx")
+        query = client.acctQuery("19700101000000")
+        client.doQuery(query, argv[1]+"_acct.ofx")
     else:
        if "CCSTMT" in sites[argv[1]]["caps"]:
           query = client.ccQuery(argv[3], dtstart)
