@@ -15,7 +15,7 @@ if __name__=="__main__":
     dtstart = time.strftime("%Y%m%d",time.localtime(time.time()-31*86400))
     dtnow = time.strftime("%Y%m%d%H%M%S",time.localtime())
     if len(argv) < 3:
-        print "Usage:",argv[0], "site user [account] [CHECKING/SAVINGS/.. if downloading from bank account]"
+        print "Usage:",argv[0], "site user [account1,[account2,[account3...]]] [CHECKING/SAVINGS/.. if downloading from bank account]"
         print "available sites:",join(", ",sites.keys())
         sys.exit()
     passwd = getpass.getpass()
@@ -25,10 +25,10 @@ if __name__=="__main__":
         query = client.acctQuery("19700101000000")
         client.doQuery(query, argv[1]+"_acct.ofx")
     else:
-       if "CCSTMT" in sites[argv[1]]["caps"]:
-          query = client.ccQuery(argv[3], dtstart)
-       elif "INVSTMT" in sites[argv[1]]["caps"]:
-          query = client.invstQuery(sites[argv[1]]["fiorg"], argv[3], dtstart, dtnow)
-       elif "BASTMT" in sites[argv[1]]["caps"]:
-          query = client.baQuery(sites[argv[1]]["bankid"], argv[3], dtstart, dtnow, argv[4])
-       client.doQuery(query, argv[1]+dtnow+".ofx")
+        if "CCSTMT" in sites[argv[1]]["caps"]:
+            query = client.ccQuery(argv[3].split(","), dtstart)
+        elif "INVSTMT" in sites[argv[1]]["caps"]:
+            query = client.invstQuery(sites[argv[1]]["fiorg"], argv[3].split(","), dtstart, dtnow)
+        elif "BASTMT" in sites[argv[1]]["caps"]:
+            query = client.baQuery(sites[argv[1]]["bankid"], argv[3].split(","), dtstart, dtnow, argv[4])
+        client.doQuery(query, argv[1]+dtnow+".ofx")

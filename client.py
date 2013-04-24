@@ -8,6 +8,9 @@ def _field(tag,value):
 def _tag(tag,*contents):
     return join("\r\n",["<"+tag+">"]+list(contents)+["</"+tag+">"])
 
+def _message(msgType,*trans):
+    return _tag(msgType+"MSGSRQV1", *trans)
+
 def _date():
     return time.strftime("%Y%m%d%H%M%S",time.localtime())
 
@@ -50,54 +53,55 @@ class OFXClient:
 
     def _acctreq(self, dtstart):
         req = _tag("ACCTINFORQ",_field("DTACCTUP",dtstart))
-        return self._message("SIGNUP","ACCTINFO",req)
+        return _message("SIGNUP",self._transaction("ACCTINFO",req))
 
-# this is from _ccreq below and reading page 176 of the latest OFX doc.
-    def _bareq(self, bankid, acctid, dtstart, dtend, accttype):
-        config=self.config
-        req = _tag("STMTRQ",
-                    _tag("BANKACCTFROM",
-                        _field("BANKID",bankid),
-                        _field("ACCTID",acctid),
-                        _field("ACCTTYPE",accttype)),
-                    _tag("INCTRAN",
-                        _field("DTSTART",dtstart),
-                        _field("DTEND",dtend),
-                        _field("INCLUDE","Y")))
-        return self._message("BANK","STMT",req)
+    def _bareq(self, bankid, acctids, dtstart, dtend, accttype):
+        trans = [self._transaction("STMT",
+                        _tag("STMTRQ",
+                            _tag("BANKACCTFROM",
+                                _field("BANKID",bankid),
+                                _field("ACCTID",acctid),
+                                _field("ACCTTYPE",accttype)),
+                            _tag("INCTRAN",
+                                _field("DTSTART",dtstart),
+                                _field("DTEND",dtend), # required for MS Money
+                                _field("INCLUDE","Y"))))
+                        for acctid in acctids]
+        return _message("BANK",*trans)
 
-    def _ccreq(self, acctid, dtstart):
-        config=self.config
-        req = _tag("CCSTMTRQ",
-                    _tag("CCACCTFROM",
-                        _field("ACCTID",acctid)),
-                    _tag("INCTRAN",
-                        _field("DTSTART",dtstart),
-                        _field("INCLUDE","Y")))
-        return self._message("CREDITCARD","CCSTMT",req)
+    def _ccreq(self, acctids, dtstart):
+        trans = [self._transaction("CCSTMT",
+                        _tag("CCSTMTRQ",
+                            _tag("CCACCTFROM",
+                                _field("ACCTID",acctid)),
+                            _tag("INCTRAN",
+                                _field("DTSTART",dtstart),
+                                _field("INCLUDE","Y"))))
+                        for acctid in acctids]
+        return _message("CREDITCARD",*trans)
 
     def _invstreq(self, brokerid, acctid, dtstart, dtend):
-        req = _tag("INVSTMTRQ",
-                    _tag("INVACCTFROM",
-                        _field("BROKERID", brokerid),
-                        _field("ACCTID",acctid)),
-                    _tag("INCTRAN",
-                        _field("DTSTART",dtstart),
-                        _field("INCLUDE","Y")),
-                    _field("INCOO","Y"),
-                    _tag("INCPOS",
-                        _field("DTASOF", dtend),
-                        _field("INCLUDE","Y")),
-                    _field("INCBAL","Y"))
-        return self._message("INVSTMT","INVSTMT",req)
+        trans = [self._transaction("INVSTMT",
+                        _tag("INVSTMTRQ",
+                            _tag("INVACCTFROM",
+                                _field("BROKERID", brokerid),
+                                _field("ACCTID",acctid)),
+                            _tag("INCTRAN",
+                                _field("DTSTART",dtstart),
+                                _field("INCLUDE","Y")),
+                            _field("INCOO","Y"),
+                            _tag("INCPOS",
+                                _field("DTASOF", dtend),
+                                _field("INCLUDE","Y")),
+                            _field("INCBAL","Y")))
+                        for acctid in acctids]
+        return _message("INVSTMT",*trans)
 
-    def _message(self,msgType,trnType,request):
-        config = self.config
-        return _tag(msgType+"MSGSRQV1",
-                    _tag(trnType+"TRNRQ",
+    def _transaction(self,trnType,request):
+        return _tag(trnType+"TRNRQ",
                          _field("TRNUID",_genuuid()),
                          _field("CLTCOOKIE",self._cookie()),
-                         request))
+                         request)
 
     def _header(self):
         return join("\r\n",[ "OFXHEADER:100",
@@ -111,19 +115,19 @@ class OFXClient:
                            "NEWFILEUID:"+_genuuid(),
                            ""])
 
-    def baQuery(self, bankid, acctid, dtstart, dtend, accttype):
+    def baQuery(self, bankid, acctids, dtstart, dtend, accttype):
         """Bank account statement request"""
         return join("\r\n",[self._header(),
                        _tag("OFX",
                                 self._signOn(),
-                                self._bareq(bankid, acctid, dtstart, dtend, accttype))])
+                                self._bareq(bankid, acctids, dtstart, dtend, accttype))])
 
-    def ccQuery(self, acctid, dtstart):
+    def ccQuery(self, acctids, dtstart):
         """CC Statement request"""
         return join("\r\n",[self._header(),
                           _tag("OFX",
                                self._signOn(),
-                               self._ccreq(acctid, dtstart))])
+                               self._ccreq(acctids, dtstart))])
 
     def acctQuery(self,dtstart):
         return join("\r\n",[self._header(),
@@ -131,11 +135,11 @@ class OFXClient:
                                self._signOn(),
                                self._acctreq(dtstart))])
 
-    def invstQuery(self, brokerid, acctid, dtstart, dtend):
+    def invstQuery(self, brokerid, acctids, dtstart, dtend):
         return join("\r\n",[self._header(),
                           _tag("OFX",
                                self._signOn(),
-                               self._invstreq(brokerid, acctid, dtstart, dtend))])
+                               self._invstreq(brokerid, acctids, dtstart, dtend))])
 
     def doQuery(self,query,name):
         # N.B. urllib doesn't honor user Content-type, use urllib2
