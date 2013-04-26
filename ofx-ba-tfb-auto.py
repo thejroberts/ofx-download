@@ -1,9 +1,19 @@
 #!/usr/bin/python
 from client import OFXClient
+from glob import iglob as listfiles
 import json, sys, time, os
 
 argv = sys.argv
 join = str.join
+
+def findLastTime(site):
+    files = listfiles(site + '*[0-9].ofx')
+    last = 19700101000000
+    for f in files:
+        current = int(f.lstrip(site).rstrip('.ofx'))
+        if current > last:
+            last = current
+    return time.strptime(str(current), "%Y%m%d%H%M%S")
 
 if __name__=="__main__":
     try:
@@ -12,8 +22,9 @@ if __name__=="__main__":
     except IOError as e:
         print 'no "sites.json" file detected'
 
-    dtstart = time.strftime("%Y%m%d",time.localtime(time.time()-31*86400))
+    dtstart = time.strftime("%Y%m%d%H%M%S",findLastTime(argv[1]))
     dtnow = time.strftime("%Y%m%d%H%M%S",time.localtime())
+
     if len(argv) < 4:
         print "Usage:",argv[0], "site user password [account1,[account2,[account3...]]] [CHECKING/SAVINGS/.. if downloading from bank account]"
         print "available sites:",join(", ",sites.keys())
