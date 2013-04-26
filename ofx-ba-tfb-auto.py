@@ -1,19 +1,20 @@
 #!/usr/bin/python
 from client import OFXClient
-from glob import iglob as listfiles
+from glob import glob as listfiles
 import json, sys, time, os
 
 argv = sys.argv
 join = str.join
 
 def findLastTime(site):
+    # determine the last time this account was downloaded using previous files
     files = listfiles(site + '*[0-9].ofx')
-    last = 19700101000000
-    for f in files:
-        current = int(f.lstrip(site).rstrip('.ofx'))
-        if current > last:
-            last = current
-    return time.strptime(str(current), "%Y%m%d%H%M%S")
+    if len(files) > 0:
+        last = max(files)
+        return time.strptime(last, argv[1] + "%Y%m%d%H%M%S.ofx")
+    else:
+        # no previous files, resort to grabbing the last 31 days
+        return time.localtime(time.time()-31*86400)
 
 if __name__=="__main__":
     try:
