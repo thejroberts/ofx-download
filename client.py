@@ -20,8 +20,6 @@ def _genuuid():
 class OFXClient:
     """Encapsulate an ofx client, config is a dict containing configuration"""
     def __init__(self, config, user, password):
-        self.password = password
-        self.user = user
         self.config = config
         self.cookie = 3
         config["user"] = user
